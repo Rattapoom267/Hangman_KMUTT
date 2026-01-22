@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hangman KMUTT Edition</title>
+
+  <style>
+    body {
+      font-family: "Prompt", sans-serif;
+      background-color: #ffe6e6;
+      color: #111111;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* หน้าปก */
+    #welcome {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(150deg, #CC0000, #8B0000);
+      color: #ffffff;
+    }
+
+    #welcome h1 {
+      font-size: 2.5rem;
+      margin: 20px 0;
+    }
+
+    #welcome p {
+      margin-bottom: 30px;
+    }
+
+    /* โลโก้จริง KMUTT */
+    .official-logo {
+      width: 150px;
+      height: auto;
+      margin-bottom: 30px;
+      background-color: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    /* โลโก้ SVG เล็ก */
+    .logo {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+    }
+
+    /* ปุ่มเริ่ม */
+    #startBtn {
+      background-color: #ffffff;
+      color: #CC0000;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #startBtn:hover {
+      background-color: #f0f0f0;
+    }
+
+    /* หน้าเกม */
+    #game {
+      display: none;
+      padding: 30px;
+    }
+
+    #question {
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+      color: #CC0000;
+      font-weight: bold;
+    }
+
+    #wordDisplay {
+      font-size: 2.2rem;
+      letter-spacing: 10px;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    /* ปุ่มตัวอักษร */
+    #letters button {
+      margin: 5px;
+      padding: 15px 18px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #CC0000;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #letters button:hover {
+      background-color: #a30000;
+    }
+
+    #letters button:disabled {
+      background-color: #ffe6e6;
+      color: #555;
+      cursor: default;
+    }
+
+    #status {
+      font-size: 1.3rem;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    #hint {
+      margin-top: 10px;
+      font-style: italic;
+      color: #CC0000;
+    }
+
+    /* แขวนคอ */
+    #hangman {
+      font-family: monospace;
+      white-space: pre;
+      font-size: 1.2rem;
+      margin-top: 20px;
+      color: #CC0000;
+      font-weight: bold;
+    }
+
+    #resetBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #CC0000;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #resetBtn:hover {
+      background-color: #a30000;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- หน้าปก -->
+  <div id="welcome">
+    <!-- โลโก้จริงของ KMUTT -->
+    <img 
+      src="https://upload.wikimedia.org/wikipedia/th/9/94/KMUTT.png" 
+      alt="KMUTT Official Logo" 
+      class="official-logo"
+      onerror="this.style.display='none'; document.getElementById('backup-logo').style.display='block';"
+    />
+    
+    <!-- โลโก้สำรอง (ถ้าโหลดไม่ได้) -->
+    <svg id="backup-logo" class="official-logo" style="display:none;" viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="90" fill="#CC0000"/>
+      <text x="100" y="95" text-anchor="middle" font-size="40" fill="white" font-weight="bold">
+        KMUTT
+      </text>
+      <text x="100" y="125" text-anchor="middle" font-size="18" fill="white">
+        THONBURI
+      </text>
+    </svg>
+    
+    <h1>Hangman KMUTT Edition</h1>
+    <p>เกมทายคำธีมมหาวิทยาลัย</p>
+    <button id="startBtn">เริ่มเล่น</button>
+  </div>
+
+  <!-- หน้าเกม -->
+  <div id="game">
+    <!-- โลโก้เล็ก -->
+    <svg class="logo" viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="90" fill="#CC0000"/>
+      <text x="100" y="95" text-anchor="middle" font-size="40" fill="white" font-weight="bold">
+        KMUTT
+      </text>
+      <text x="100" y="125" text-anchor="middle" font-size="18" fill="white">
+        THONBURI
+      </text>
+    </svg>
+
+    <h1>Hangman KMUTT Edition</h1>
+    <p id="question"></p>
+    <p id="wordDisplay"></p>
+
+    <div id="letters"></div>
+    <div id="hangman"></div>
+
+    <p id="hint"></p>
+    <p id="status"></p>
+
+    <button id="resetBtn">เริ่มใหม่</button>
+  </div>
+
+  <script>
+    // ชุดคำถาม KMUTT
+    const questions = [
+      {
+        question: "ชื่อเต็มของมหาวิทยาลัย KMUTT คืออะไร",
+        answer: "มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี",
+        hint: "ชื่อเต็มทางการของ มจธ."
+      },
+      {
+        question: "สีประจำมหาวิทยาลัยพระจอมเกล้าธนบุรีคือสีอะไร",
+        answer: "สีแดง",
+        hint: "สีของไฟ"
+      },
+      {
+        question: "ชื่อเล่นของมหาวิทยาลัยพระจอมเกล้าธนบุรี",
+        answer: "มจธ",
+        hint: "ย่อ 3 ตัว"
+      },
+      {
+        question: "ลานกลางมหาวิทยาลัยที่แอร์หนาวมาก",
+        answer: "ลานแดง",
+        hint: "เย็นสบาย จุดนัดพบยอดฮิต"
+      },
+      {
+        question: "สัตว์ที่อยู่ในมหาวิทยาลัยที่นักศึกษาชอบไปเล่น",
+        answer: "ห่าน",
+        hint: "นกตัวใหญ่ คอยาว ชอบว่ายน้ำ"
+      },
+      {
+        question: "ชื่อห้องสมุดกลางของมหาวิทยาลัย",
+        answer: "หอสมุดกลาง",
+        hint: "ที่เก็บหนังสือตึกสูง"
+      },
+      {
+        question: "มหาวิทยาลัยตั้งอยู่ที่ถนนอะไร",
+        answer: "ถนนประชาอุทิศ",
+        hint: "ถนนหลักฝั่งธนบุรี"
+      },
+      {
+        question: "แม่น้ำที่ไหลผ่านมหาวิทยาลัย",
+        answer: "แม่น้ำเจ้าพระยา",
+        hint: "แม่น้ำสายหลักของไทย"
+      },
+      {
+        question: "มหาวิทยาลัยมีวิทยาเขตใหม่อยู่ที่จังหวัดไหน",
+        answer: "ราชบุรี",
+        hint: "จังหวัดตะวันตก มีถ้ำมากมาย"
+      },
+      {
+        question: "สถานีรถไฟฟ้าที่ใกล้มหาวิทยาลัยที่สุด",
+        answer: "วุฒากาศ",
+        hint: "สถานีสีน้ำเงิน"
+      },
+      {
+        question: "มหาวิทยาลัยตั้งอยู่ฝั่งไหนของกรุงเทพฯ",
+        answer: "ฝั่งธนบุรี",
+        hint: "ข้ามแม่น้ำจากฝั่งตรงข้าม"
+      }
+    ];
+    
+    // รูปแบบ Hangman
+    const hangmanStages = [
+      "",
+      "O",
+      "O\n|",
+      "O\n|\\",
+      "O\n|\\\n/",
+      "O\n|\\\n/\\",
+      "O\n|\\\n/\\\n☠️"
+    ];
+
+    let selected, guessed, attemptsLeft;
+
+    // เริ่มเกมใหม่
+    function newGame() {
+      selected = questions[Math.floor(Math.random() * questions.length)];
+      guessed = [];
+      attemptsLeft = 6;
+
+      document.getElementById("question").textContent = "❓ " + selected.question;
+      document.getElementById("hint").textContent = "💡 คำใบ้: " + selected.hint;
+      document.getElementById("status").textContent = "โอกาสที่เหลือ: " + attemptsLeft;
+      document.getElementById("hangman").textContent = hangmanStages[0];
+      document.getElementById("wordDisplay").textContent = displayWord();
+
+      // สร้างปุ่มตัวอักษร
+      const thaiLetters = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผพฟภมยรลวศษสหฬอฮะาิีึืุูเแโใไั๊๋์่้ำ".split("");
+      const letterDiv = document.getElementById("letters");
+      letterDiv.innerHTML = "";
+
+      thaiLetters.forEach(ch => {
+        const btn = document.createElement("button");
+        btn.textContent = ch;
+        btn.onclick = () => guess(ch);
+        letterDiv.appendChild(btn);
+      });
+    }
+
+    // แสดงคำตอบ
+    function displayWord() {
+      return selected.answer.split("").map(ch =>
+        guessed.includes(ch) ? ch : "_"
+      ).join(" ");
+    }
+
+    // เดาตัวอักษร
+    function guess(letter) {
+      guessed.push(letter);
+
+      // ปิดปุ่มที่กด
+      document.querySelectorAll("#letters button").forEach(btn => {
+        if (btn.textContent === letter) btn.disabled = true;
+      });
+
+      if (selected.answer.includes(letter)) {
+        // ถูก
+        document.getElementById("wordDisplay").textContent = displayWord();
+
+        if (!document.getElementById("wordDisplay").textContent.includes("_")) {
+          document.getElementById("status").textContent =
+            " ✅คุณชนะ!! คำตอบคือ \"" + selected.answer + "\"";
+          disableAllButtons();
+        }
+      } else {
+        // ผิด
+        attemptsLeft--;
+        document.getElementById("status").textContent =
+          "โอกาสที่เหลือ: " + attemptsLeft;
+        document.getElementById("hangman").textContent =
+          hangmanStages[6 - attemptsLeft];
+
+        if (attemptsLeft <= 0) {
+          document.getElementById("status").textContent =
+            "💀 เกมจบ! คำตอบคือ \"" + selected.answer + "\"";
+          disableAllButtons();
+        }
+      }
+    }
+
+    // ปิดปุ่มทั้งหมด
+    function disableAllButtons() {
+      document.querySelectorAll("#letters button")
+        .forEach(btn => btn.disabled = true);
+    }
+
+    // ปุ่มเริ่มเล่น
+    document.getElementById("startBtn").onclick = () => {
+      document.getElementById("welcome").style.display = "none";
+      document.getElementById("game").style.display = "block";
+      newGame();
+    };
+
+    // ปุ่มเริ่มใหม่
+    document.getElementById("resetBtn").onclick = newGame;
+  </script>
+
+</body>
+  </html>
